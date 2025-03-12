@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Tracing Game</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #gameCanvas {
+            border: 1px solid black;
+            resize: both;
+            overflow: auto;
+        }
+        #controls {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <input type="text" id="imageUrl" placeholder="Enter image URL" size="50">
+        <button id="startButton">Start</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const imageUrlInput = document.getElementById('imageUrl');
+        const startButton = document.getElementById('startButton');
+        const gameCanvas = document.getElementById('gameCanvas');
+        const controls = document.getElementById('controls');
+        const ctx = gameCanvas.getContext('2d');
+
+        let img = new Image();
+
+        startButton.addEventListener('click', () => {
+            const imageUrl = imageUrlInput.value;
+            if (imageUrl) {
+                lockMouse();
+                loadImage(imageUrl);
+                controls.style.display = 'none';
+            }
+        });
+
+        function lockMouse() {
+            gameCanvas.requestPointerLock = gameCanvas.requestPointerLock || gameCanvas.mozRequestPointerLock;
+            if (gameCanvas.requestPointerLock) {
+                gameCanvas.requestPointerLock();
+            }
+        }
+
+        function loadImage(url) {
+            img.onload = () => {
+                drawImage();
+            };
+            img.src = url;
+        }
+
+        function drawImage() {
+            ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            ctx.drawImage(img, 0, 0, gameCanvas.width, gameCanvas.height);
+        }
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === gameCanvas || document.mozPointerLockElement === gameCanvas) {
+                console.log('The pointer lock status is now locked');
+            } else {
+                console.log('The pointer lock status is now unlocked');
+            }
+        }, false);
+
+        // Event listener to handle resizing
+        let isResizing = false;
+        let lastDownX = 0;
+        let lastDownY = 0;
+
+        gameCanvas.addEventListener('mousedown', function(e) {
+            if (e.target === gameCanvas) {
+                isResizing = true;
+                lastDownX = e.clientX;
+                lastDownY = e.clientY;
+            }
+        });
+
+        window.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            let offsetX = e.clientX - lastDownX;
+            let offsetY = e.clientY - lastDownY;
+            gameCanvas.width = gameCanvas.width + offsetX;
+            gameCanvas.height = gameCanvas.height + offsetY;
+            lastDownX = e.clientX;
+            lastDownY = e.clientY;
+            drawImage();
+        });
+
+        window.addEventListener('mouseup', function(e) {
+            isResizing = false;
+        });
+
+        // Prevent touch events from interfering
+        function preventTouchEvent(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        document.addEventListener('touchstart', preventTouchEvent, { passive: false });
+        document.addEventListener('touchmove', preventTouchEvent, { passive: false });
+        document.addEventListener('touchend', preventTouchEvent, { passive: false });
+        document.addEventListener('touchcancel', preventTouchEvent, { passive: false });
+
+        // Handle "end" typing to reset the game
+        let keyBuffer = [];
+        const resetTimeout = 1000; // 1 second
+
+        document.addEventListener('keydown', (e) => {
+            keyBuffer.push(e.key);
+            if (keyBuffer.join('').includes('end')) {
+                setTimeout(() => {
+                    if (keyBuffer.join('').includes('end')) {
+                        resetGame();
+                    }
+                }, resetTimeout);
+            }
+            if (keyBuffer.length > 3) {
+                keyBuffer.shift(); // Keep the buffer size to a maximum of 3
+            }
+        });
+
+        function resetGame() {
+            ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            controls.style.display = 'flex';
+            keyBuffer = [];
+            document.exitPointerLock();
+        }
+    </script>
+</body>
+</html>
